@@ -1,7 +1,7 @@
 ---
 output:
-  html_document: default
   pdf_document: default
+  html_document: default
 bibliography: pkg-refs.bib
 nocite: '@*'
 ---
@@ -56,9 +56,11 @@ Example: 17X17 - so 17 cells * 30m resolution == 510m on a side
 
 Matrix() references these values to determine size of filter.  Currently set to 3 different resolutions.
 
-    `ScaleList <- c(3, 17, 35) # Set number of cells for focal mean filter`  
+```
+ScaleList <- c(3, 17, 35) # Set number of cells for focal mean filter 
 
-    `w = matrix(1, nrow = z, ncol = z)` "z" in loop references values in ScaleList  
+w = matrix(1, nrow = z, ncol = z) "z" in loop references values in ScaleList  
+```
 
 ##### *CRS is set to EPSG: 4326*   
 
@@ -189,9 +191,7 @@ library(stringr)
 library(tictoc)
 library(animation)
 
-cites <- get_citations(scan_packages())
-
-cites
+cite_packages()
 
 #  There is an entry in the YAML as well that makes this work
 
