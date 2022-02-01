@@ -20,45 +20,27 @@ library(raster)
 library(sf)
 library(stringr)
 library(tictoc)
-library(animation)
-# 2020-01-21 14:57:07 ------------------------------mdp
-# 2020-01-22 09:56:28 ------------------------------mdp
-# 2020-01-23 08:23:47 ------------------------------mdp
-# 2020-01-24 13:51:32 ------------------------------mdp
-# 2020-01-27 09:30:16 ------------------------------mdp
-# 2020-01-28 10:00:21 ------------------------------mdp
-# 2020-01-28 15:38:23 ------------------------------mdp
-# 2020-01-29 08:01:23 ------------------------------mdp
-# 2020-01-30 08:21:27 ------------------------------mdp
-# 2020-01-30 15:02:50 ------------------------------mdp
-# 2020-01-31 08:33:53 ------------------------------mdp
-# 2020-02-17 13:49:41 ------------------------------mdp
-# 2020-02-18 08:56:17 ------------------------------mdp
-# 2020-02-20 12:57:20 ------------------------------mdp
-# 2020-02-25 11:16:28 ------------------------------mdp
-# 2020-02-28 14:20:09 ------------------------------mdp
-# 2020-03-03 07:50:02 ------------------------------mdp
-# 2020-12-17 13:11:42 ------------------------------mdp
-# 2021-05-03 14:32:44 ------------------------------mdp
-# 2021-05-04 09:01:06 ------------------------------mdp
+
 
 ##  Local stuff  =================
 base_path   <- find_rstudio_root_file()
 source_path <- file.path(base_path, "source_data//")
 cover_path   <- file.path(base_path, "source_data/veg_cover//")
+biomass_path   <- file.path(base_path, "source_data/biomass//")
+woody30_path   <- file.path(base_path, "source_data/woody_trans/30//")
+woody240_path   <- file.path(base_path, "source_data/oody_trans/240//")
 dat_path    <- file.path(base_path, "dat_output//")
+focal_path    <- file.path(base_path, "source_data/focal_means//")
 plot_path   <- file.path(base_path, "plots//")
 csv_path    <- file.path(base_path, "csv_output//")
+EPSG_path <- "EPSG4326/"
 
 
-#crs_str <- "+proj=utm +zone=14 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 "
-crs_str <- 4326  ##  This solves the proj4 update issues
+crs_str <- "EPSG:4326"  
 
-tic()
+
 ##  Load rasters -----
-raster.list <- list.files(cover_path, full.names = TRUE, pattern = ".tif$")
-
-#raster.list <- raster.list[5:6]
+raster.list <- list.files(paste0(cover_path, EPSG_path), full.names = TRUE, pattern = ".tif$")
 
 AFG    <- lapply(raster.list, raster, band = 1)  #  Annual forbs & grasses
 BG     <- lapply(raster.list, raster, band = 2)  #  Bare Ground
@@ -67,14 +49,6 @@ PFG    <- lapply(raster.list, raster, band = 4)  #  Perennial forbs & grasses
 Shrubs <- lapply(raster.list, raster, band = 5)  #  Shrubs
 Trees  <- lapply(raster.list, raster, band = 6)  #  Trees
 
-
-##  Set projection to EPSG:4326  -------
-AFG    <- lapply(AFG,    projectRaster, crs = crs_str)
-BG     <- lapply(BG,     projectRaster, crs = crs_str)
-Litter <- lapply(Litter, projectRaster, crs = crs_str)
-PFG    <- lapply(PFG,    projectRaster, crs = crs_str)
-Shrubs <- lapply(Shrubs, projectRaster, crs = crs_str)
-Trees  <- lapply(Trees,  projectRaster, crs = crs_str)
 
 ## Convert lists to RasterStacks  -----------
 AFG_stack    <- stack(AFG)
@@ -115,7 +89,7 @@ for (i  in 1:nlayers(AFG_stack)) {
 }
 
 
-tic()  ##  Just to see if extents/crs is right  -------------
+##  Just to see if extents/crs is right  -------------
 for (i in 1:nlayers(AFG_stack)) {
   lapply(AFG_stack@layers[i],        plot)
   lapply(BG_stack@layers[i],         plot)
@@ -128,28 +102,29 @@ for (i in 1:nlayers(AFG_stack)) {
 }
 toc()
 
+##  This is a better way to do above plotting
+# animate(AFG_stack, n=1, sub = "Annual Herbaceous")
+# animate(BG_stack, n=1, sub = "Bare Ground")
+
+
 
 ##  Read in shapes  ----
 property    <- st_read(paste0(source_path, "Boundary.shp"))
-NOBO_points <- st_read(paste0(source_path, "OR_SurveyPoints.shp"))  ##  NOBO survey points
+#NOBO_points <- st_read(paste0(source_path, "OR_SurveyPoints.shp"))  ##  NOBO survey points
 
-rebuff    <- st_buffer(property, 1500)   ##  Create buffer vector @ 1500m around property line
-
-#crs_str <- "+proj=utm +zone=14 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 "
-
-#crs_str <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs" ##  EPSG:4326 - has to be this for RAP
+rebuff      <- st_buffer(property, 1500)   ##  Create buffer vector @ 1500m around property line
 
 #crs_str <- 4326
-property <- st_transform(property, crs_str)
-rebuff <- st_transform(rebuff, crs_str)
-
-NOBO_points <- st_transform(NOBO_points, crs_str)
+property    <- st_transform(property,    crs_str)
+rebuff      <- st_transform(rebuff,      crs_str)
+#NOBO_points <- st_transform(NOBO_points, crs_str)
 #NOBO_points <- as_Spatial(NOBO_points)          ##  This has to be class sp rather than sf to be used for extract
 
 
-plot(rebuff$geometry)+
-  plot(property$geometry, add = TRUE)+
-  plot(NOBO_points$geometry, add = TRUE)
+plot(rebuff$geometry) +
+  plot(property$geometry, add = TRUE) #+
+  #plot(NOBO_points$geometry, add = TRUE)
+
 dev.off()
 
 ##  Mask to buffer -----
@@ -165,7 +140,7 @@ Trees_stack_mask      <- Trees_stack
 Woody_stack_mask      <- Woody_stack
 Herbaceous_stack_mask <- Herbaceous_stack
 
-##  Mask to buffer and plot
+##  Mask to buffer and plot - plotting is just for drama
 tic()
 for (x in 1:nlayers(AFG_stack)) {
   df <- mask(AFG_stack[[x]],    rebuff)
@@ -308,8 +283,8 @@ tic()
 for (i in 1:nlayers(All_Layers)) {
   plot(All_Layers[[i]], main = All_Layers[[i]]@data@names, sub = "All Layers") +
     plot(property$geometry, add = TRUE) +
-    plot(rebuff$geometry, add = TRUE) +
-    plot(NOBO_points, add = TRUE, col = "red", pch = 19) # warnings come from this line
+    plot(rebuff$geometry, add = TRUE) #+
+    #plot(NOBO_points$geometry, add = TRUE, col = "red", pch = 19)
 
 }
 toc()
@@ -333,20 +308,25 @@ Shrubs <- round(extract(Shrubs_stack_mask, NOBO_points),2)
 
 # Multiple resolutions for focal mean filter - RAP data is 30m resolution
 # 3X30  = 90
+# 9X30  = 270
 # 17X30 = 510
 # 35X30 = 1050
 
-ScaleList <- c(3, 17, 35) # Set number of cells for focal mean filter
+ScaleList <- c(3, 9, 17, 35) # Set number of cells for focal mean filter
 
-##  Generate plots of focal mean  ---------
+##  Generate plots of focal mean  ====
 focal_mean <- All_Layers  ##  Set extents from existing file
 
-NOBO_points <- as_Spatial(NOBO_points) ##  This has to be class sp rather than sf to be used for extract
+
+
+# Needed for extracting to points ~line 359-360
+#NOBO_points <- as_Spatial(NOBO_points) ##  This has to be class sp rather than sf to be used for extract
 
 tic()
 #ScaleList outside of focal mean
 for (z in ScaleList) {# Each resolution
     for (x in 1:nlayers(All_Layers)) { # Each layer
+    #for (x in 1:10) { # hacked for video
     focal_mean[[x]] <-
       focal(
         All_Layers[[x]],
@@ -354,32 +334,51 @@ for (z in ScaleList) {# Each resolution
         fun = mean,
         na.rm = FALSE)
     names(focal_mean[[x]]) <- paste0(All_Layers@layers[[x]]@data@names, "_",(z*30),"M")
+    df <- focal_mean ##  Useful for animations below - turn off lines 369-370
+    df_name <- paste0("Focal_", (z*30))
+    assign(df_name,df) 
 
-    # df <- focal_mean ##  Useful for animations below - turn off lines 369-370
-    # assign(paste0("Focal_", (z*30)),df)
+    projection(df[[x]]) <- "EPSG:4326" # Set projection before writing file
+    print(st_crs(df[[x]]))
+  
+    writeRaster(df[[x]],paste0(focal_path, paste(df@layers[[x]]@data@names,"_Focal.tif")))
 
-pdf(paste0(plot_path, focal_mean@layers[[x]]@data@names, ".pdf")) ## Before the plot
+    plot(focal_mean[[x]],
+         main = focal_mean@layers[[x]]@data@names,
+         sub = "Focal Mean")
+pdf(paste0(focal_path, focal_mean@layers[[x]]@data@names, ".pdf")) ## Before the plot
     plot(focal_mean[[x]],
          main = focal_mean@layers[[x]]@data@names,
          sub = "Focal Mean")
 dev.off()
 
     }
-
-  df <- as.data.frame(round(extract(focal_mean, NOBO_points),2))
-  assign(paste0("Focal_", (z*30)),df)
+# Use when extracting values from points - not used when generating rasters  
+  # df <- as.data.frame(round(extract(focal_mean, NOBO_points),2))
+  # assign(paste0("Focal_", (z*30)),df)
 
 }
 toc()
 
+## Just making sure the projection stuck with the files
+raster.list <- list.files(focal_path, full.names = TRUE, pattern = ".tif$")
+#focalCRS    <- lapply(raster.list, raster, band = 1)  
+checkCRS    <- lapply(raster.list, raster)  
+for (g in seq_along(checkCRS)) {
+  print(checkCRS[[g]]@crs@projargs) # should see "+proj=longlat +datum=WGS84 +no_defs"
+  
+}
+
+
+#  More extracting stuff ----------
 # rmlist <- c("Focal_1050", "Focal_510", "Focal_90")
 # rm(list = (rmlist))
 
-SiteLabels <- c(1:16) # For rows labels
-
-Focal_df <- bind_cols(Focal_90, Focal_510, Focal_1050) %>% # Binding side by side
-    mutate(Site = c(1:16))  %>% ## Add site labels
-    dplyr::select(Site, everything())  ## raster package has a select as well
+# SiteLabels <- c(1:16) # For rows labels
+# 
+# Focal_df <- bind_cols(Focal_90, Focal_510, Focal_1050) %>% # Binding side by side
+#     mutate(Site = c(1:16))  %>% ## Add site labels
+#     dplyr::select(Site, everything())  ## raster package has a select as well
 
 #write_csv(Focal_df, paste0(dat_path, "NOBO_Focal_Means_df", ".dat"))  ##  Write data files ----
 #write_csv(Focal_df, paste0(csv_path, "NOBO_Focal_Means_df", ".csv"))
@@ -405,21 +404,3 @@ ggplot(Refocoused, aes(Year, Avg, col = Year)) +
   ggtitle(paste0("Oswalt Ranch RAP Data - 1986-2020\nFocal Means - All Bands - All Scales"))
   ggsave(paste0(plot_path, "OR_Focal_All.pdf"), width = 14, height = 8, units = "in")
 
-
-
-##  Animations  -------
-animate(focal_mean)
-animate(Focal_90)
-dev.off()
-
-saveHTML({
-
-  for (i in 1:nlayers(Focal_90)) {
-    plot(Focal_90[[i]],
-         main = Focal_90@layers[[i]]@data@names,
-         sub = "Focal Mean",
-         ani.options(verbose = FALSE))
-  }
-
-},global.opts = "$.fn.scianimator.defaults.theme = 'dark';"
-)
